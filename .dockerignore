@@ -1,0 +1,42 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build output
+dist
+.angular
+/tmp
+/out-tsc
+
+# Testing
+coverage
+*.spec.ts
+karma.conf.js
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+*.md
+
+# Config files not needed in build
+.editorconfig
+.browserslistrc
+tsconfig.spec.json
+
+# Logs
+*.log

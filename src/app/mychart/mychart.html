@@ -1,0 +1,50 @@
+<div class="mychart-container">
+  <h1 class="app-title">The Compound Interest Calculator</h1>
+
+  <div class="responsive-layout">
+    <!-- Chart Section -->
+    <div class="chart-section">
+      <div class="chart-wrapper">
+        <canvas id="myChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Controls Section -->
+    <div class="controls-section">
+      <h2>Investment Details</h2>
+      <form [formGroup]="myForm">
+
+        <div class="control-group">
+          <div class="label-container">
+            <label class="control-label">Years</label>
+            <span class="control-value">{{ myForm.get('years')!.value }}</span>
+          </div>
+          <mat-slider min="1" max="100">
+            <input matSliderThumb formControlName="years">
+          </mat-slider>
+        </div>
+
+        <div class="control-group">
+          <div class="label-container">
+            <label class="control-label">Rate of Return</label>
+            <span class="control-value">{{ myForm.get('interestRate')!.value | percent }}</span>
+          </div>
+          <mat-slider step="0.01" min="0" max="1.0">
+            <input matSliderThumb formControlName="interestRate">
+          </mat-slider>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Starting Amount</label>
+          <input class="control-input" type="number" formControlName="principal" placeholder="$100">
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Monthly Added</label>
+          <input class="control-input" type="number" formControlName="monthlyAddedPrincipal" placeholder="$0">
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>

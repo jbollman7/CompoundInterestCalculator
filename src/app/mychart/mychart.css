@@ -1,0 +1,157 @@
+/* Container - fits viewport without scrolling */
+.mychart-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem;
+  box-sizing: border-box;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-title {
+  text-align: center;
+  margin: 0 0 1.5rem 0;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  color: #333;
+  font-weight: 600;
+}
+
+/* Responsive layout - side by side on desktop, stacked on mobile */
+.responsive-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  flex: 1;
+}
+
+/* Chart Section - responsive sizing */
+.chart-section {
+  flex: 1;
+  min-height: 0; /* Important for flexbox */
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 100%;
+  min-height: 250px;
+  max-height: 400px;
+  width: 100%;
+}
+
+.chart-wrapper canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Controls Section */
+.controls-section {
+  flex: 0 0 auto;
+}
+
+.controls-section h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+/* Control Groups */
+.control-group {
+  margin-bottom: 1.5rem;
+}
+
+.label-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.control-label {
+  font-weight: 500;
+  font-size: 1rem;
+  color: #555;
+}
+
+.control-value {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #3f51b5;
+}
+
+.control-input {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+  transition: border-color 0.3s;
+}
+
+.control-input:focus {
+  outline: none;
+  border-color: #3f51b5;
+}
+
+/* Material Slider styling */
+mat-slider {
+  width: 100%;
+  display: block;
+}
+
+/* Desktop Layout - side by side */
+@media screen and (min-width: 768px) {
+  .responsive-layout {
+    flex-direction: row;
+    gap: 2rem;
+  }
+
+  .chart-section {
+    flex: 2;
+    min-width: 0;
+  }
+
+  .controls-section {
+    flex: 1;
+    min-width: 300px;
+    max-width: 400px;
+  }
+
+  .chart-wrapper {
+    max-height: 500px;
+  }
+}
+
+/* Large Desktop - more height for chart */
+@media screen and (min-width: 1200px) {
+  .chart-wrapper {
+    max-height: 600px;
+  }
+}
+
+/* Mobile - ensure everything fits */
+@media screen and (max-width: 767px) {
+  .mychart-container {
+    padding: 0.5rem;
+  }
+
+  .app-title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .chart-wrapper {
+    min-height: 200px;
+    max-height: 300px;
+  }
+
+  .control-group {
+    margin-bottom: 1rem;
+  }
+
+  .controls-section h2 {
+    font-size: 1.25rem;
+  }
+}
