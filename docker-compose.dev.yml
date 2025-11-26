@@ -1,0 +1,16 @@
+version: '3.8'
+
+# Development compose file - Direct access to app without Caddy
+# Usage: docker compose -f docker-compose.dev.yml up
+
+services:
+  app:
+    build: .
+    container_name: compound-interest-dev
+    ports:
+      - "8080:80"  # Direct access at http://localhost:8080
+      # Optional: Mount built files for quicker testing
+      # Uncomment if you want to test without rebuilding
+      # - ./dist/compound-interest/browser:/usr/share/nginx/html:ro
+    environment:
+      - NODE_ENV=development

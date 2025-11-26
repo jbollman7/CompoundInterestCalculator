@@ -1,0 +1,17 @@
+# Local development Caddyfile
+# For testing the full stack locally with Caddy
+
+localhost {
+    reverse_proxy app:80
+    
+    # Simple logging to see requests
+    log {
+        output stdout
+        format console
+    }
+}
+
+# Alternative: localhost with port
+localhost:80 {
+    reverse_proxy app:80
+}
