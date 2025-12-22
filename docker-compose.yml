@@ -2,13 +2,15 @@ version: '3.8'
 
 services:
   app:
-    image: compound-interest:latest
-    build: .
+    # For production: use image from GitHub Container Registry
+    # Replace YOUR-USERNAME with your GitHub username
+    image: ghcr.io/YOUR-USERNAME/compound-interest:latest
+    
+    # For local development: uncomment to build locally
+    # build: .
+    
     container_name: compound-interest
     restart: unless-stopped
-    # Uncomment the next 2 lines if you want direct access without Caddy (e.g., for testing)
-    # ports:
-    #   - "8080:80"  # Access at http://localhost:8080
     networks:
       - app-network
     healthcheck:
@@ -18,7 +20,8 @@ services:
       start_period: 5s
       retries: 3
     labels:
-      - "com.centurylinklabs.watchtower.enable=true"
+      # Disable Watchtower if using webhook deployment
+      - "com.centurylinklabs.watchtower.enable=false"
 
   caddy:
     image: caddy:2-alpine

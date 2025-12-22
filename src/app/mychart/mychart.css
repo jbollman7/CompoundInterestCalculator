@@ -142,7 +142,7 @@ mat-slider {
     margin-bottom: 0.5rem;
   }
 
-  .chart-wrapper {
+  .chart-wrapper, .chart-section {
     min-height: 200px;
     max-height: 300px;
   }

@@ -1,4 +1,4 @@
-import { PercentPipe } from '@angular/common';
+import { CurrencyPipe, PercentPipe } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatSliderModule } from '@angular/material/slider';
@@ -22,11 +22,12 @@ interface CompoundedInterestObject {
   monthlyAddedPrincipal: number
   year: number
   interestRate: number
-  calcResult: number
+  totalAmount: number
+  earnedInterest: number
 }
 @Component({
   selector: 'my-chart',
-  imports: [MatSliderModule, FormsModule, ReactiveFormsModule, PercentPipe  ],
+  imports: [MatSliderModule, FormsModule, ReactiveFormsModule, PercentPipe, CurrencyPipe  ],
   templateUrl: './mychart.html',
   styleUrl: './mychart.css',
 })
@@ -40,7 +41,9 @@ export class MyChart implements OnInit, OnDestroy {
   years = 15;
   interestRate = .07; // rate percentage of interest
   principal = 100;
-  monthlyAddedPrincipal = 0;
+  totalAmountCalculated = 0;
+  earnedInterestCalculated = 0;
+  monthlyAddedPrincipal = 2;
   calculationResult = this.principal;
   myChart!: Chart<"bar", number[], number>;
   sub!: Subscription;
@@ -97,9 +100,15 @@ export class MyChart implements OnInit, OnDestroy {
           labels: this.results.map(x => x['year']),
           datasets: [
             {
-              label: "Value",
-              backgroundColor: ["#3e95cd", "#8e5ea2","#3cba9f","#e8c3b9","#c45850"],
-              data: this.results.map(x => x['calcResult'])
+              label: "Total",
+              //backgroundColor: ["#3e95cd", "#8e5ea2","#3cba9f","#e8c3b9","#c45850"],
+              backgroundColor: ["#0000ff", "#9900ff","#47afa2","#6600ff","#cc00ff"],
+              data: this.results.map(x => x['principal'])
+            },
+            {
+              label: "Earned Interest",
+              backgroundColor: ["#8080FF", "#CC80FF","#75C3B9", "#B280FF", "#E680FF"],
+              data: this.results.map(x => x['earnedInterest'])
             }
           ]
         },
@@ -112,6 +121,7 @@ export class MyChart implements OnInit, OnDestroy {
           },
           scales: {
             y: {
+              stacked: true,
               beginAtZero: true,
               ticks: {
                 callback: function(value: any) {
@@ -124,6 +134,7 @@ export class MyChart implements OnInit, OnDestroy {
               }
             },
             x: {
+              stacked: true,
               title: {
                 display: true,
                 text: 'Year'
@@ -156,22 +167,24 @@ export class MyChart implements OnInit, OnDestroy {
   updateChart() {
     // Clear and reuse arrays to prevent Chart.js memory accumulation
     const labels = this.myChart.data.labels as number[];
-    const data = this.myChart.data.datasets[0].data as number[];
+    const total = this.myChart.data.datasets[0].data as number[];
+    const interest = this.myChart.data.datasets[1].data as number[];
 
     // Clear existing arrays (releases old references)
     labels.length = 0;
-    data.length = 0;
+    total.length = 0;
+    interest.length = 0;
 
     // Populate with new data (reusing same array objects)
     this.results.forEach(result => {
       labels.push(result.year);
-      data.push(result.calcResult);
+      total.push(result.totalAmount);
+      interest.push(result.earnedInterest);
     });
 
     // Update with animation (smooth transitions)
     this.myChart.update();
   }
-
 
   private formatLabel(value: number): string {
     const numValue = Number(value);
@@ -213,11 +226,15 @@ export class MyChart implements OnInit, OnDestroy {
 
     //Must calculate every year between NOW and desired end result
     for (var year = 0; year <= this.years; year++) {
+      this.totalAmountCalculated = this.compoundInterestWithAddedPrincipal(this.principal, this.yearlyCompounds, this.interestRate, year, this.monthlyAddedPrincipal);
+      this.earnedInterestCalculated = this.totalAmountCalculated - (this.principal + (this.monthlyAddedPrincipal * 12 * year));
+
       this.results.push({
-        principal: this.principal,
+        principal: this.principal + this.monthlyAddedPrincipal * 12 * year,
         year: this.currentYear + year,
         interestRate: this.interestRate,
-        calcResult: this.compoundInterestWithAddedPrincipal(this.principal, this.yearlyCompounds, this.interestRate, year, this.monthlyAddedPrincipal),
+        totalAmount: this.totalAmountCalculated,
+        earnedInterest: this.earnedInterestCalculated,
         monthlyAddedPrincipal: this.monthlyAddedPrincipal
       });
     }

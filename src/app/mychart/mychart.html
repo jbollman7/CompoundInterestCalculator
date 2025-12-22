@@ -43,6 +43,12 @@
           <label class="control-label">Monthly Added</label>
           <input class="control-input" type="number" formControlName="monthlyAddedPrincipal" placeholder="$0">
         </div>
+        <div class="Results">
+          <h3>Results:</h3>
+          <p> Total Amount: {{ totalAmountCalculated | currency }}</p>
+          <p> Interest Earned: {{ earnedInterestCalculated | currency }}</p>
+
+        </div>
 
       </form>
     </div>
