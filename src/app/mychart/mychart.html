@@ -30,20 +30,35 @@
           </div>
         </div>
 
-        <div class="control-group">
-          <label class="control-label">Starting Amount</label>
-          <input matInput class="control-input" type="number" formControlName="principal" placeholder="$100">
-        </div>
+        <div class="control-group-row">
+          <div class="control-group-half">
+            <label class="control-label">Starting Amount</label>
+            <input matInput class="control-input" type="number" formControlName="principal" placeholder="$100">
+          </div>
 
-        <div class="control-group">
-          <label class="control-label">Monthly Added</label>
-          <input class="control-input" type="number" formControlName="monthlyAddedPrincipal" placeholder="$0">
+          <div class="control-group-half">
+            <label class="control-label">Monthly Added</label>
+            <input matInput class="control-input" type="number" formControlName="monthlyAddedPrincipal" placeholder="$0">
+          </div>
         </div>
         <div class="Results">
           <h3>Results:</h3>
-          <p> Total Amount: {{ totalAmountCalculated | currency }}</p>
-          <p> Interest Earned: {{ earnedInterestCalculated | currency }}</p>
-          <p> Invested Principal: {{ totalPrincipal | currency }}</p>
+          <div class="results-layout">
+            <div class="result-main">
+              <span class="result-label-main">Total Amount</span>
+              <span class="result-value-main">{{ totalAmountCalculated | currency }}</span>
+            </div>
+            <div class="result-secondary">
+              <p class="result-item-small">
+                <span class="result-label-small">Interest Earned:</span>
+                <span class="result-value-small">{{ earnedInterestCalculated | currency }}</span>
+              </p>
+              <p class="result-item-small">
+                <span class="result-label-small">Invested Principal:</span>
+                <span class="result-value-small">{{ totalPrincipal | currency }}</span>
+              </p>
+            </div>
+          </div>
         </div>
       </form>
     </div>
