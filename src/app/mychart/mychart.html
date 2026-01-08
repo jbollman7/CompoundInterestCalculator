@@ -11,32 +11,28 @@
 
     <!-- Controls Section -->
     <div class="controls-section">
-      <h2>Investment Details</h2>
       <form [formGroup]="myForm">
-
         <div class="control-group">
-          <div class="label-container">
-            <label class="control-label">Years</label>
-            <span class="control-value">{{ myForm.get('years')!.value }}</span>
+          <label class="control-label">Years</label>
+          <div class="number-control">
+            <button type="button" class="control-btn" (click)="decrementYears()">-</button>
+            <div class="control-value-center">{{ myForm.get('years')!.value }}</div>
+            <button type="button" class="control-btn" (click)="incrementYears()">+</button>
           </div>
-          <mat-slider min="1" max="100">
-            <input matSliderThumb formControlName="years">
-          </mat-slider>
         </div>
 
         <div class="control-group">
-          <div class="label-container">
-            <label class="control-label">Rate of Return</label>
-            <span class="control-value">{{ myForm.get('interestRate')!.value | percent }}</span>
+          <label class="control-label">Rate of Return</label>
+          <div class="number-control">
+            <button type="button" class="control-btn" (click)="decrementRate()">-</button>
+            <div class="control-value-center">{{ myForm.get('interestRate')!.value | percent }}</div>
+            <button type="button" class="control-btn" (click)="incrementRate()">+</button>
           </div>
-          <mat-slider step="0.01" min="0" max="1.0">
-            <input matSliderThumb formControlName="interestRate">
-          </mat-slider>
         </div>
 
         <div class="control-group">
           <label class="control-label">Starting Amount</label>
-          <input class="control-input" type="number" formControlName="principal" placeholder="$100">
+          <input matInput class="control-input" type="number" formControlName="principal" placeholder="$100">
         </div>
 
         <div class="control-group">
@@ -47,9 +43,8 @@
           <h3>Results:</h3>
           <p> Total Amount: {{ totalAmountCalculated | currency }}</p>
           <p> Interest Earned: {{ earnedInterestCalculated | currency }}</p>
-
+          <p> Invested Principal: {{ totalPrincipal | currency }}</p>
         </div>
-
       </form>
     </div>
   </div>

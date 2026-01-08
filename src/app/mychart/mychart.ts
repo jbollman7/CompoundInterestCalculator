@@ -1,7 +1,6 @@
 import { CurrencyPipe, PercentPipe } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatSliderModule } from '@angular/material/slider';
 import {
   Chart,
   BarController,
@@ -19,7 +18,6 @@ type Dictioanry = {
 
 interface CompoundedInterestObject {
   principal: number
-  monthlyAddedPrincipal: number
   year: number
   interestRate: number
   totalAmount: number
@@ -27,7 +25,7 @@ interface CompoundedInterestObject {
 }
 @Component({
   selector: 'my-chart',
-  imports: [MatSliderModule, FormsModule, ReactiveFormsModule, PercentPipe, CurrencyPipe  ],
+  imports: [FormsModule, ReactiveFormsModule, PercentPipe, CurrencyPipe  ],
   templateUrl: './mychart.html',
   styleUrl: './mychart.css',
 })
@@ -43,7 +41,8 @@ export class MyChart implements OnInit, OnDestroy {
   principal = 100;
   totalAmountCalculated = 0;
   earnedInterestCalculated = 0;
-  monthlyAddedPrincipal = 2;
+  monthlyAddedPrincipal = 0;
+  totalPrincipal = 0;
   calculationResult = this.principal;
   myChart!: Chart<"bar", number[], number>;
   sub!: Subscription;
@@ -89,6 +88,34 @@ export class MyChart implements OnInit, OnDestroy {
     this.myChart.destroy();
   }
 
+  incrementYears() {
+    const current = this.myForm.get('years')!.value;
+    if (current < 100) {
+      this.myForm.patchValue({ years: current + 1 });
+    }
+  }
+
+  decrementYears() {
+    const current = this.myForm.get('years')!.value;
+    if (current > 1) {
+      this.myForm.patchValue({ years: current - 1 });
+    }
+  }
+
+  incrementRate() {
+    const current = this.myForm.get('interestRate')!.value;
+    if (current < 1.0) {
+      this.myForm.patchValue({ interestRate: Math.min(1.0, current + 0.01) });
+    }
+  }
+
+  decrementRate() {
+    const current = this.myForm.get('interestRate')!.value;
+    if (current > 0) {
+      this.myForm.patchValue({ interestRate: Math.max(0, current - 0.01) });
+    }
+  }
+
   results: CompoundedInterestObject[] = [];
 
   initChart() {
@@ -100,7 +127,7 @@ export class MyChart implements OnInit, OnDestroy {
           labels: this.results.map(x => x['year']),
           datasets: [
             {
-              label: "Total",
+              label: "Principal",
               //backgroundColor: ["#3e95cd", "#8e5ea2","#3cba9f","#e8c3b9","#c45850"],
               backgroundColor: ["#0000ff", "#9900ff","#47afa2","#6600ff","#cc00ff"],
               data: this.results.map(x => x['principal'])
@@ -166,19 +193,19 @@ export class MyChart implements OnInit, OnDestroy {
 
   updateChart() {
     // Clear and reuse arrays to prevent Chart.js memory accumulation
-    const labels = this.myChart.data.labels as number[];
-    const total = this.myChart.data.datasets[0].data as number[];
-    const interest = this.myChart.data.datasets[1].data as number[];
+    const years: number[] = this.myChart.data.labels as number[];
+    const principal: number[]  = this.myChart.data.datasets[0].data;
+    const interest: number[] = this.myChart.data.datasets[1].data;
 
     // Clear existing arrays (releases old references)
-    labels.length = 0;
-    total.length = 0;
+    years.length = 0;
+    principal.length = 0;
     interest.length = 0;
 
     // Populate with new data (reusing same array objects)
     this.results.forEach(result => {
-      labels.push(result.year);
-      total.push(result.totalAmount);
+      years.push(result.year);
+      principal.push(this.totalPrincipal);
       interest.push(result.earnedInterest);
     });
 
@@ -228,14 +255,14 @@ export class MyChart implements OnInit, OnDestroy {
     for (var year = 0; year <= this.years; year++) {
       this.totalAmountCalculated = this.compoundInterestWithAddedPrincipal(this.principal, this.yearlyCompounds, this.interestRate, year, this.monthlyAddedPrincipal);
       this.earnedInterestCalculated = this.totalAmountCalculated - (this.principal + (this.monthlyAddedPrincipal * 12 * year));
+      this.totalPrincipal = this.totalAmountCalculated - this.earnedInterestCalculated
 
       this.results.push({
-        principal: this.principal + this.monthlyAddedPrincipal * 12 * year,
+        principal: this.totalPrincipal,
         year: this.currentYear + year,
         interestRate: this.interestRate,
         totalAmount: this.totalAmountCalculated,
         earnedInterest: this.earnedInterestCalculated,
-        monthlyAddedPrincipal: this.monthlyAddedPrincipal
       });
     }
   }
