@@ -46,16 +46,16 @@
           <div class="results-layout">
             <div class="result-main">
               <span class="result-label-main">Total Amount</span>
-              <span class="result-value-main">{{ totalAmountCalculated | currency }}</span>
+              <span class="result-value-main">{{ getFinalTotalAmount() | currency }}</span>
             </div>
             <div class="result-secondary">
               <p class="result-item-small">
                 <span class="result-label-small">Interest Earned:</span>
-                <span class="result-value-small">{{ earnedInterestCalculated | currency }}</span>
+                <span class="result-value-small">{{ getFinalInterestEarned() | currency }}</span>
               </p>
               <p class="result-item-small">
                 <span class="result-label-small">Invested Principal:</span>
-                <span class="result-value-small">{{ totalPrincipal | currency }}</span>
+                <span class="result-value-small">{{ getFinalPrincipal() | currency }}</span>
               </p>
             </div>
           </div>

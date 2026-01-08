@@ -1,5 +1,5 @@
 import { CurrencyPipe, PercentPipe } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   Chart,
@@ -47,7 +47,7 @@ export class MyChart implements OnInit, OnDestroy {
   myChart!: Chart<"bar", number[], number>;
   sub!: Subscription;
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private cdr: ChangeDetectorRef) {
     // Register only the Chart.js components we need for tree-shaking
     Chart.register(
       BarController,
@@ -80,6 +80,7 @@ export class MyChart implements OnInit, OnDestroy {
         this.removeData();
         this.populateData();
         this.updateChart();
+        this.cdr.markForCheck();
     });
   }
 
@@ -116,6 +117,18 @@ export class MyChart implements OnInit, OnDestroy {
     }
   }
 
+  getFinalTotalAmount(): number {
+    return this.results.length > 0 ? this.results[this.results.length - 1].totalAmount : 0;
+  }
+
+  getFinalInterestEarned(): number {
+    return this.results.length > 0 ? this.results[this.results.length - 1].earnedInterest : 0;
+  }
+
+  getFinalPrincipal(): number {
+    return this.results.length > 0 ? this.results[this.results.length - 1].principal : 0;
+  }
+
   results: CompoundedInterestObject[] = [];
 
   initChart() {
@@ -128,7 +141,6 @@ export class MyChart implements OnInit, OnDestroy {
           datasets: [
             {
               label: "Principal",
-              //backgroundColor: ["#3e95cd", "#8e5ea2","#3cba9f","#e8c3b9","#c45850"],
               backgroundColor: ["#0000ff", "#9900ff","#47afa2","#6600ff","#cc00ff"],
               data: this.results.map(x => x['principal'])
             },
@@ -192,25 +204,13 @@ export class MyChart implements OnInit, OnDestroy {
   }
 
   updateChart() {
-    // Clear and reuse arrays to prevent Chart.js memory accumulation
-    const years: number[] = this.myChart.data.labels as number[];
-    const principal: number[]  = this.myChart.data.datasets[0].data;
-    const interest: number[] = this.myChart.data.datasets[1].data;
+    // Completely replace the data arrays to ensure Chart.js picks up changes
+    this.myChart.data.labels = this.results.map(x => x.year);
+    this.myChart.data.datasets[0].data = this.results.map(x => x.principal);
+    this.myChart.data.datasets[1].data = this.results.map(x => x.earnedInterest);
 
-    // Clear existing arrays (releases old references)
-    years.length = 0;
-    principal.length = 0;
-    interest.length = 0;
-
-    // Populate with new data (reusing same array objects)
-    this.results.forEach(result => {
-      years.push(result.year);
-      principal.push(this.totalPrincipal);
-      interest.push(result.earnedInterest);
-    });
-
-    // Update with animation (smooth transitions)
-    this.myChart.update();
+    // Force update with mode 'reset' to prevent animation issues
+    this.myChart.update('none');
   }
 
   private formatLabel(value: number): string {
@@ -236,6 +236,40 @@ export class MyChart implements OnInit, OnDestroy {
     this.results = [];
   }
 
+  private populateData() {
+
+    //Must calculate every year between NOW and desired end result
+    for (var year = 0; year <= this.years; year++) {
+      const totalAmount = this.compoundInterestWithAddedPrincipal(this.principal, this.yearlyCompounds, this.interestRate, year, this.monthlyAddedPrincipal);
+
+      // Calculate the actual principal invested up to this year
+      const principalInvested = this.principal + (this.monthlyAddedPrincipal * 12 * year);
+      const earnedInterest = totalAmount - principalInvested;
+
+      this.results.push({
+        principal: principalInvested,
+        year: this.currentYear + year,
+        interestRate: this.interestRate,
+        totalAmount: totalAmount,
+        earnedInterest: earnedInterest,
+      });
+    }
+
+    // Update display values from the final year (if results exist)
+    if (this.results.length > 0) {
+      const finalResult = this.results[this.results.length - 1];
+      this.totalAmountCalculated = finalResult.totalAmount;
+      this.earnedInterestCalculated = finalResult.earnedInterest;
+      this.totalPrincipal = finalResult.principal;
+      console.log('Updated display values:', {
+        totalAmount: this.totalAmountCalculated,
+        interest: this.earnedInterestCalculated,
+        principal: this.totalPrincipal,
+        resultsLength: this.results.length
+      });
+    }
+  }
+
   // No added principal
   private compoundInterest(principal: number, yearlyCompounds: number, rate: number, time: number): number {
 	  return principal * Math.pow((1 + (rate/yearlyCompounds)),yearlyCompounds * time);
@@ -244,26 +278,6 @@ export class MyChart implements OnInit, OnDestroy {
   private compoundInterestWithAddedPrincipal(principal: number, yearlyCompounds: number, rate: number, time: number, monthlyAdded: number): number {
     let left = this.compoundInterest(principal, yearlyCompounds, rate, time);
     let right = monthlyAdded * (Math.pow(1 + (rate/yearlyCompounds), yearlyCompounds * time) -1) / (rate / yearlyCompounds);
-    let A = left + right
-
-    return A
-  }
-
-  private populateData() {
-
-    //Must calculate every year between NOW and desired end result
-    for (var year = 0; year <= this.years; year++) {
-      this.totalAmountCalculated = this.compoundInterestWithAddedPrincipal(this.principal, this.yearlyCompounds, this.interestRate, year, this.monthlyAddedPrincipal);
-      this.earnedInterestCalculated = this.totalAmountCalculated - (this.principal + (this.monthlyAddedPrincipal * 12 * year));
-      this.totalPrincipal = this.totalAmountCalculated - this.earnedInterestCalculated
-
-      this.results.push({
-        principal: this.totalPrincipal,
-        year: this.currentYear + year,
-        interestRate: this.interestRate,
-        totalAmount: this.totalAmountCalculated,
-        earnedInterest: this.earnedInterestCalculated,
-      });
-    }
+    return left + right
   }
 }
