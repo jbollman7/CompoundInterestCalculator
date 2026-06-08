@@ -1,5 +1,5 @@
 import { CurrencyPipe, PercentPipe } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   Chart,
@@ -27,6 +27,7 @@ interface CompoundedInterestObject {
   selector: 'my-chart',
   imports: [FormsModule, ReactiveFormsModule, PercentPipe, CurrencyPipe  ],
   templateUrl: './mychart.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './mychart.css',
 })
 export class MyChart implements OnInit, OnDestroy {
