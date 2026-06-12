@@ -4,10 +4,6 @@ import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, T
 import {form, FormField} from '@angular/forms/signals';
 import { debounceTime, Subscription } from 'rxjs';
 
-type Dictioanry = {
-  [key: string]: number;
-};
-
 interface CompoundedInterestObject {
   earnedInterest: number
   interestRate: number
@@ -28,13 +24,13 @@ interface StartingPrincipalMonthlyAdded {
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './mychart.css',
 })
-export class MyChart implements OnInit, OnDestroy {
+export class MyChart implements OnInit {
 
   protected title = 'CompoundInterest';
   readonly yearlyCompounds = 12;  // monthly as default
 
   readonly currentYear = (new Date).getFullYear();
-  years = signal<number>(15);
+  years = signal<number>(1);
   interestRate = signal<number>(.07); // rate percentage of interest
   principal = signal<number>(100);
   totalAmountCalculated = signal<number>(0);
@@ -51,23 +47,15 @@ export class MyChart implements OnInit, OnDestroy {
 
   inputForm = form(this.fooModel);
 
-  // interestModel = signal<CompoundedInterestObject>({
-  //   earnedInterest: this.earnedInterestCalculated(),
-  //   interestRate: this.interestRate(),
-  //   principal: this.principal(),
-  //   totalAmount: this.totalPrincipal(),
-  //   year: this.years()
-  // });
-  //
-  // interestForm = form(this.interestModel);
-
-  results: CompoundedInterestObject[] = [];
+  results = signal<CompoundedInterestObject[]>([]);
 
 
   // TODO: Make this computed signal rerun for ANY data change
   populateFoo = effect(() => {
     // I assume this will run if either of the four change
-    console.log('populateFoo ran');
+    this.results.set([]);
+
+    let tempResults = [];
     const years = this.years();
     const interestRate = this.interestRate();
     const principal = this.inputForm().value().startingAmount;
@@ -80,7 +68,8 @@ export class MyChart implements OnInit, OnDestroy {
       const principalInvested = principal + (monthlyAdded * 12 * year);
       const earnedInterest = totalAmount - principalInvested;
 
-      this.results.push({
+      // temp array to hold value
+      tempResults.push({
         principal: principalInvested,
         year: this.currentYear + year,
         interestRate: this.interestRate(),
@@ -88,9 +77,24 @@ export class MyChart implements OnInit, OnDestroy {
         earnedInterest: earnedInterest,
       });
     }
+    this.results.update(items => [...items, ...tempResults]);
 
   });
+
+  // new effect to update chart
+  // After data is populated, second effect will run
+  joeMomma = effect(() => {
+    const results = this.results();
+    // Completely replace the data arrays to ensure Chart.js picks up changes
+    this.myChart.data.labels = results.map(x => x.year);
+    this.myChart.data.datasets[0].data = results.map(x => x.principal);
+    this.myChart.data.datasets[1].data = results.map(x => x.earnedInterest);
+    //
+    // // Force update with mode 'reset' to prevent animation issues
+    this.myChart.update('none');
   // populateData compute best attempt
+
+  });
 
   constructor() {
     // Register only the Chart.js components we need for tree-shaking
@@ -105,7 +109,9 @@ export class MyChart implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.populateData();
+
+    this.years.set(15);
+    //this.populateData();
     this.initChart();
     // this.sub = this.myForm.valueChanges
     //   .pipe(debounceTime(300))
@@ -121,11 +127,6 @@ export class MyChart implements OnInit, OnDestroy {
     // });
   }
 
-  ngOnDestroy() {
-    this.sub.unsubscribe();
-    this.myChart.destroy();
-  }
-
 
   initChart() {
     const that = this;
@@ -133,17 +134,17 @@ export class MyChart implements OnInit, OnDestroy {
      'myChart' , {
         type: 'bar',
         data: {
-          labels: this.results.map(x => x['year']),
+          labels: this.results().map(x => x['year']),
           datasets: [
             {
               label: "Principal",
               backgroundColor: ["#0000ff", "#9900ff","#47afa2","#6600ff","#cc00ff"],
-              data: this.results.map(x => x['principal'])
+              data: this.results().map(x => x['principal'])
             },
             {
               label: "Earned Interest",
               backgroundColor: ["#8080FF", "#CC80FF","#75C3B9", "#B280FF", "#E680FF"],
-              data: this.results.map(x => x['earnedInterest'])
+              data: this.results().map(x => x['earnedInterest'])
             }
           ]
         },
@@ -200,13 +201,13 @@ export class MyChart implements OnInit, OnDestroy {
   }
 
   updateChart() {
-    // Completely replace the data arrays to ensure Chart.js picks up changes
-    this.myChart.data.labels = this.results.map(x => x.year);
-    this.myChart.data.datasets[0].data = this.results.map(x => x.principal);
-    this.myChart.data.datasets[1].data = this.results.map(x => x.earnedInterest);
-
-    // Force update with mode 'reset' to prevent animation issues
-    this.myChart.update('none');
+    // // Completely replace the data arrays to ensure Chart.js picks up changes
+    // this.myChart.data.labels = this.results.map(x => x.year);
+    // this.myChart.data.datasets[0].data = this.results.map(x => x.principal);
+    // this.myChart.data.datasets[1].data = this.results.map(x => x.earnedInterest);
+    //
+    // // Force update with mode 'reset' to prevent animation issues
+    // this.myChart.update('none');
   }
 
   incrementYears() {
@@ -228,15 +229,15 @@ export class MyChart implements OnInit, OnDestroy {
 
   // ALl three of these has to do with grabbing last result
   getFinalTotalAmount(): number {
-    return this.results.length > 0 ? this.results[this.results.length - 1].totalAmount : 0;
+    return this.results.length > 0 ? this.results()[this.results.length - 1].totalAmount : 0;
   }
 
   getFinalInterestEarned(): number {
-    return this.results.length > 0 ? this.results[this.results.length - 1].earnedInterest : 0;
+    return this.results.length > 0 ? this.results()[this.results.length - 1].earnedInterest : 0;
   }
 
   getFinalPrincipal(): number {
-    return this.results.length > 0 ? this.results[this.results.length - 1].principal : 0;
+    return this.results.length > 0 ? this.results()[this.results.length - 1].principal : 0;
   }
 
 
@@ -246,23 +247,23 @@ export class MyChart implements OnInit, OnDestroy {
   private populateData() {
 
     //Must calculate every year between NOW and desired end result
-    for (var year = 0; year <= this.years(); year++) {
-
-      // do i need to calcualte totalAmount for each result or just end result?
-      const totalAmount = this.compoundInterestWithAddedPrincipal(this.principal(), this.yearlyCompounds, this.interestRate(), year, this.monthlyAddedPrincipal());
-
-      // Calculate the actual principal invested up to this year
-      const principalInvested = this.principal() + (this.monthlyAddedPrincipal() * 12 * year);
-      const earnedInterest = totalAmount - principalInvested;
-
-      this.results.push({
-        principal: principalInvested,
-        year: this.currentYear + year,
-        interestRate: this.interestRate(),
-        totalAmount: totalAmount,
-        earnedInterest: earnedInterest,
-      });
-    }
+    // for (var year = 0; year <= this.years(); year++) {
+    //
+    //   // do i need to calcualte totalAmount for each result or just end result?
+    //   const totalAmount = this.compoundInterestWithAddedPrincipal(this.principal(), this.yearlyCompounds, this.interestRate(), year, this.monthlyAddedPrincipal());
+    //
+    //   // Calculate the actual principal invested up to this year
+    //   const principalInvested = this.principal() + (this.monthlyAddedPrincipal() * 12 * year);
+    //   const earnedInterest = totalAmount - principalInvested;
+    //
+    //   this.results.push({
+    //     principal: principalInvested,
+    //     year: this.currentYear + year,
+    //     interestRate: this.interestRate(),
+    //     totalAmount: totalAmount,
+    //     earnedInterest: earnedInterest,
+    //   });
+    // }
 
     // Update display values from the final year (if results exist)
     if (this.results.length > 0) {
@@ -307,9 +308,5 @@ export class MyChart implements OnInit, OnDestroy {
     }
     // Regular
     return '$' + numValue.toLocaleString();
-  }
-
-  private removeData() {
-    this.results = [];
   }
 }
