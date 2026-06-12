@@ -39,12 +39,16 @@
             <input matInput class="control-input" type="number" [formField]="inputForm.monthlyAdded">
           </div>
         </div>
+      @if(debug) {
       <div class="form-debug">
-    <h3>Current Form Values:</h3>
-    <p>StartingAmount: {{ inputForm.startingAmount().value() }}</p>
-    <p>monthlyAdded: {{ inputForm.monthlyAdded().value() }}</p>
-  </div>
-              <div class="Results">
+        <h3>Current Form Values:</h3>
+        <p>Years: {{ years() }}</p>
+        <p>rate of return: {{ interestRate() | percent }}</p>
+        <p>StartingAmount: {{ inputForm.startingAmount().value() }}</p>
+        <p>monthlyAdded: {{ inputForm.monthlyAdded().value() }}</p>
+      </div>
+      }
+      <div class="Results">
           <h3>Results:</h3>
           <div class="results-layout">
             <div class="result-main">

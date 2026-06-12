@@ -1,8 +1,7 @@
 import { CurrencyPipe, PercentPipe } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, ChangeDetectionStrategy, signal, computed, effect } from '@angular/core';
+import {  Component, OnInit, ChangeDetectionStrategy, signal, computed, effect } from '@angular/core';
 import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, Tooltip } from 'chart.js';
 import {form, FormField} from '@angular/forms/signals';
-import { debounceTime, Subscription } from 'rxjs';
 
 interface CompoundedInterestObject {
   earnedInterest: number
@@ -26,6 +25,7 @@ interface StartingPrincipalMonthlyAdded {
 })
 export class MyChart implements OnInit {
 
+  readonly debug = false;
   protected title = 'CompoundInterest';
   readonly yearlyCompounds = 12;  // monthly as default
 
@@ -38,7 +38,6 @@ export class MyChart implements OnInit {
   monthlyAddedPrincipal = signal<number>(0);
   totalPrincipal = signal<number>(0);
   myChart!: Chart<"bar", number[], number>;
-  sub!: Subscription;
 
   fooModel = signal<StartingPrincipalMonthlyAdded>({
     startingAmount: this.principal(),
@@ -49,9 +48,7 @@ export class MyChart implements OnInit {
 
   results = signal<CompoundedInterestObject[]>([]);
 
-
-  // TODO: Make this computed signal rerun for ANY data change
-  populateFoo = effect(() => {
+  populateData = effect(() => {
     // I assume this will run if either of the four change
     this.results.set([]);
 
@@ -83,17 +80,15 @@ export class MyChart implements OnInit {
 
   // new effect to update chart
   // After data is populated, second effect will run
-  joeMomma = effect(() => {
+  updateChart = effect(() => {
     const results = this.results();
     // Completely replace the data arrays to ensure Chart.js picks up changes
     this.myChart.data.labels = results.map(x => x.year);
     this.myChart.data.datasets[0].data = results.map(x => x.principal);
     this.myChart.data.datasets[1].data = results.map(x => x.earnedInterest);
-    //
-    // // Force update with mode 'reset' to prevent animation issues
-    this.myChart.update('none');
-  // populateData compute best attempt
 
+    // Force update with mode 'reset' to prevent animation issues
+    this.myChart.update('none');
   });
 
   constructor() {
@@ -109,24 +104,9 @@ export class MyChart implements OnInit {
   }
 
   ngOnInit() {
-
     this.years.set(15);
-    //this.populateData();
     this.initChart();
-    // this.sub = this.myForm.valueChanges
-    //   .pipe(debounceTime(300))
-    //   .subscribe((value) => {
-    //     this.years.set(value.years);
-    //     this.interestRate.set(value.interestRate);
-    //     this.principal.set(value.principal);
-    //     this.monthlyAddedPrincipal.set(value.monthlyAddedPrincipal);
-    //     this.removeData();
-    //     this.populateData();
-    //     this.updateChart();
-    //     this.cdr.markForCheck();
-    // });
   }
-
 
   initChart() {
     const that = this;
@@ -196,20 +176,6 @@ export class MyChart implements OnInit {
       });
   }
 
-  onSliderChange(event: Event) {
-    console.log(event);
-  }
-
-  updateChart() {
-    // // Completely replace the data arrays to ensure Chart.js picks up changes
-    // this.myChart.data.labels = this.results.map(x => x.year);
-    // this.myChart.data.datasets[0].data = this.results.map(x => x.principal);
-    // this.myChart.data.datasets[1].data = this.results.map(x => x.earnedInterest);
-    //
-    // // Force update with mode 'reset' to prevent animation issues
-    // this.myChart.update('none');
-  }
-
   incrementYears() {
     // Increment the count by 1.
     this.years.update((value) => value < 100 ? value + 1 : value);
@@ -229,58 +195,20 @@ export class MyChart implements OnInit {
 
   // ALl three of these has to do with grabbing last result
   getFinalTotalAmount(): number {
-    return this.results.length > 0 ? this.results()[this.results.length - 1].totalAmount : 0;
+    const results = this.results();
+    return results.length > 0 ? results[results.length - 1].totalAmount : 0;
   }
 
   getFinalInterestEarned(): number {
-    return this.results.length > 0 ? this.results()[this.results.length - 1].earnedInterest : 0;
+    const results = this.results();
+    return results.length > 0 ? results[results.length - 1].earnedInterest : 0;
   }
 
   getFinalPrincipal(): number {
-    return this.results.length > 0 ? this.results()[this.results.length - 1].principal : 0;
+    const results = this.results();
+    return results.length > 0 ? results[results.length - 1].principal : 0;
   }
 
-
-  // TODO: Rework this
-  // How to make this MORE reactive
-  // How can it be auto called (reactive)
-  private populateData() {
-
-    //Must calculate every year between NOW and desired end result
-    // for (var year = 0; year <= this.years(); year++) {
-    //
-    //   // do i need to calcualte totalAmount for each result or just end result?
-    //   const totalAmount = this.compoundInterestWithAddedPrincipal(this.principal(), this.yearlyCompounds, this.interestRate(), year, this.monthlyAddedPrincipal());
-    //
-    //   // Calculate the actual principal invested up to this year
-    //   const principalInvested = this.principal() + (this.monthlyAddedPrincipal() * 12 * year);
-    //   const earnedInterest = totalAmount - principalInvested;
-    //
-    //   this.results.push({
-    //     principal: principalInvested,
-    //     year: this.currentYear + year,
-    //     interestRate: this.interestRate(),
-    //     totalAmount: totalAmount,
-    //     earnedInterest: earnedInterest,
-    //   });
-    // }
-
-    // Update display values from the final year (if results exist)
-    if (this.results.length > 0) {
-
-      this.totalAmountCalculated.set(this.getFinalTotalAmount());
-      this.earnedInterestCalculated.set(this.getFinalInterestEarned());
-      this.totalPrincipal.set(this.getFinalPrincipal());
-      console.log('Updated display values:', {
-        totalAmount: this.totalAmountCalculated(),
-        interest: this.earnedInterestCalculated(),
-        principal: this.totalPrincipal,
-        resultsLength: this.results.length
-      });
-    }
-  }
-
-  // No added principal
   private compoundInterest(principal: number, yearlyCompounds: number, rate: number, time: number): number {
 	  return principal * Math.pow((1 + (rate/yearlyCompounds)),yearlyCompounds * time);
   }
