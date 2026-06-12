@@ -1,5 +1,5 @@
 <div class="mychart-container">
-  <h1 class="app-title">The Compound Interest Calculator</h1>
+  <h1 class="app-title">Compound Calculator</h1>
 
   <div class="responsive-layout">
     <!-- Chart Section -->
@@ -9,39 +9,42 @@
       </div>
     </div>
 
-    <!-- Controls Section -->
-    <div class="controls-section">
-      <form [formGroup]="myForm">
-        <div class="control-group">
+    <!-- Control Section -->
+  <div class="control-section">
+      <div class="control-group">
           <label class="control-label">Years</label>
           <div class="number-control">
             <button type="button" class="control-btn" (click)="decrementYears()">-</button>
-            <div class="control-value-center">{{ myForm.get('years')!.value }}</div>
+            <div class="control-value-center"> {{ years() }}</div>
             <button type="button" class="control-btn" (click)="incrementYears()">+</button>
           </div>
-        </div>
-
+      </div>
         <div class="control-group">
           <label class="control-label">Rate of Return</label>
           <div class="number-control">
             <button type="button" class="control-btn" (click)="decrementRate()">-</button>
-            <div class="control-value-center">{{ myForm.get('interestRate')!.value | percent }}</div>
+            <div class="control-value-center"> {{ interestRate() | percent }}</div>
             <button type="button" class="control-btn" (click)="incrementRate()">+</button>
           </div>
-        </div>
-
-        <div class="control-group-row">
+      </div>
+    <!-- Starting Amount + Monthly Added -->
+      <div class="control-group-row">
           <div class="control-group-half">
             <label class="control-label">Starting Amount</label>
-            <input matInput class="control-input" type="number" formControlName="principal" placeholder="$100">
+          <input matInput class="control-input" type="number" [formField]="inputForm.startingAmount">
           </div>
 
           <div class="control-group-half">
             <label class="control-label">Monthly Added</label>
-            <input matInput class="control-input" type="number" formControlName="monthlyAddedPrincipal" placeholder="$0">
+            <input matInput class="control-input" type="number" [formField]="inputForm.monthlyAdded">
           </div>
         </div>
-        <div class="Results">
+      <div class="form-debug">
+    <h3>Current Form Values:</h3>
+    <p>StartingAmount: {{ inputForm.startingAmount().value() }}</p>
+    <p>monthlyAdded: {{ inputForm.monthlyAdded().value() }}</p>
+  </div>
+              <div class="Results">
           <h3>Results:</h3>
           <div class="results-layout">
             <div class="result-main">
@@ -60,7 +63,5 @@
             </div>
           </div>
         </div>
-      </form>
-    </div>
   </div>
 </div>

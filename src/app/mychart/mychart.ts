@@ -1,15 +1,7 @@
 import { CurrencyPipe, PercentPipe } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import {
-  Chart,
-  BarController,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend
-} from 'chart.js';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ChangeDetectionStrategy, signal, computed, effect } from '@angular/core';
+import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, Tooltip } from 'chart.js';
+import {form, FormField} from '@angular/forms/signals';
 import { debounceTime, Subscription } from 'rxjs';
 
 type Dictioanry = {
@@ -17,15 +9,21 @@ type Dictioanry = {
 };
 
 interface CompoundedInterestObject {
-  principal: number
-  year: number
-  interestRate: number
-  totalAmount: number
   earnedInterest: number
+  interestRate: number
+  principal: number
+  totalAmount: number
+  year: number
 }
+
+interface StartingPrincipalMonthlyAdded {
+  startingAmount: number
+  monthlyAdded: number
+}
+
 @Component({
   selector: 'my-chart',
-  imports: [FormsModule, ReactiveFormsModule, PercentPipe, CurrencyPipe  ],
+  imports: [PercentPipe, CurrencyPipe, FormField  ],
   templateUrl: './mychart.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './mychart.css',
@@ -34,21 +32,67 @@ export class MyChart implements OnInit, OnDestroy {
 
   protected title = 'CompoundInterest';
   readonly yearlyCompounds = 12;  // monthly as default
-  myForm: FormGroup;
 
-  currentYear: number;
-  years = 15;
-  interestRate = .07; // rate percentage of interest
-  principal = 100;
-  totalAmountCalculated = 0;
-  earnedInterestCalculated = 0;
-  monthlyAddedPrincipal = 0;
-  totalPrincipal = 0;
-  calculationResult = this.principal;
+  readonly currentYear = (new Date).getFullYear();
+  years = signal<number>(15);
+  interestRate = signal<number>(.07); // rate percentage of interest
+  principal = signal<number>(100);
+  totalAmountCalculated = signal<number>(0);
+  earnedInterestCalculated = signal<number>(0);
+  monthlyAddedPrincipal = signal<number>(0);
+  totalPrincipal = signal<number>(0);
   myChart!: Chart<"bar", number[], number>;
   sub!: Subscription;
 
-  constructor(private fb: FormBuilder, private cdr: ChangeDetectorRef) {
+  fooModel = signal<StartingPrincipalMonthlyAdded>({
+    startingAmount: this.principal(),
+    monthlyAdded: this.monthlyAddedPrincipal()
+  });
+
+  inputForm = form(this.fooModel);
+
+  // interestModel = signal<CompoundedInterestObject>({
+  //   earnedInterest: this.earnedInterestCalculated(),
+  //   interestRate: this.interestRate(),
+  //   principal: this.principal(),
+  //   totalAmount: this.totalPrincipal(),
+  //   year: this.years()
+  // });
+  //
+  // interestForm = form(this.interestModel);
+
+  results: CompoundedInterestObject[] = [];
+
+
+  // TODO: Make this computed signal rerun for ANY data change
+  populateFoo = effect(() => {
+    // I assume this will run if either of the four change
+    console.log('populateFoo ran');
+    const years = this.years();
+    const interestRate = this.interestRate();
+    const principal = this.inputForm().value().startingAmount;
+    const monthlyAdded = this.inputForm().value().monthlyAdded;
+
+    for (var year = 0; year <= years; year++) {
+
+      const totalAmount = this.compoundInterestWithAddedPrincipal(principal, this.yearlyCompounds, interestRate, year, monthlyAdded);
+      // Calculate the actual principal invested up to this year
+      const principalInvested = principal + (monthlyAdded * 12 * year);
+      const earnedInterest = totalAmount - principalInvested;
+
+      this.results.push({
+        principal: principalInvested,
+        year: this.currentYear + year,
+        interestRate: this.interestRate(),
+        totalAmount: totalAmount,
+        earnedInterest: earnedInterest,
+      });
+    }
+
+  });
+  // populateData compute best attempt
+
+  constructor() {
     // Register only the Chart.js components we need for tree-shaking
     Chart.register(
       BarController,
@@ -58,31 +102,23 @@ export class MyChart implements OnInit, OnDestroy {
       Tooltip,
       Legend
     );
-
-    this.myForm = this.fb.group({
-      years: [this.years, Validators.required],
-      interestRate: [this.interestRate, Validators.required],
-      principal: [this.principal, Validators.required],
-      monthlyAddedPrincipal: [this.monthlyAddedPrincipal, Validators.required],
-    });
-    this.currentYear = (new Date).getFullYear();
   }
 
   ngOnInit() {
     this.populateData();
     this.initChart();
-    this.sub = this.myForm.valueChanges
-      .pipe(debounceTime(300))
-      .subscribe((value) => {
-        this.years = value.years;
-        this.interestRate = value.interestRate;
-        this.principal = value.principal;
-        this.monthlyAddedPrincipal = value.monthlyAddedPrincipal;
-        this.removeData();
-        this.populateData();
-        this.updateChart();
-        this.cdr.markForCheck();
-    });
+    // this.sub = this.myForm.valueChanges
+    //   .pipe(debounceTime(300))
+    //   .subscribe((value) => {
+    //     this.years.set(value.years);
+    //     this.interestRate.set(value.interestRate);
+    //     this.principal.set(value.principal);
+    //     this.monthlyAddedPrincipal.set(value.monthlyAddedPrincipal);
+    //     this.removeData();
+    //     this.populateData();
+    //     this.updateChart();
+    //     this.cdr.markForCheck();
+    // });
   }
 
   ngOnDestroy() {
@@ -90,47 +126,6 @@ export class MyChart implements OnInit, OnDestroy {
     this.myChart.destroy();
   }
 
-  incrementYears() {
-    const current = this.myForm.get('years')!.value;
-    if (current < 100) {
-      this.myForm.patchValue({ years: current + 1 });
-    }
-  }
-
-  decrementYears() {
-    const current = this.myForm.get('years')!.value;
-    if (current > 1) {
-      this.myForm.patchValue({ years: current - 1 });
-    }
-  }
-
-  incrementRate() {
-    const current = this.myForm.get('interestRate')!.value;
-    if (current < 1.0) {
-      this.myForm.patchValue({ interestRate: Math.min(1.0, current + 0.01) });
-    }
-  }
-
-  decrementRate() {
-    const current = this.myForm.get('interestRate')!.value;
-    if (current > 0) {
-      this.myForm.patchValue({ interestRate: Math.max(0, current - 0.01) });
-    }
-  }
-
-  getFinalTotalAmount(): number {
-    return this.results.length > 0 ? this.results[this.results.length - 1].totalAmount : 0;
-  }
-
-  getFinalInterestEarned(): number {
-    return this.results.length > 0 ? this.results[this.results.length - 1].earnedInterest : 0;
-  }
-
-  getFinalPrincipal(): number {
-    return this.results.length > 0 ? this.results[this.results.length - 1].principal : 0;
-  }
-
-  results: CompoundedInterestObject[] = [];
 
   initChart() {
     const that = this;
@@ -214,6 +209,87 @@ export class MyChart implements OnInit, OnDestroy {
     this.myChart.update('none');
   }
 
+  incrementYears() {
+    // Increment the count by 1.
+    this.years.update((value) => value < 100 ? value + 1 : value);
+  }
+
+  decrementYears() {
+    this.years.update((value) => value > 0 ? value - 1 : value);
+  }
+
+  incrementRate() {
+    this.interestRate.update((value) => value < 1 ? value + 0.01 : value);
+  }
+
+  decrementRate() {
+    this.interestRate.update((value) => value > 0 ? value - 0.01 : value);
+  }
+
+  // ALl three of these has to do with grabbing last result
+  getFinalTotalAmount(): number {
+    return this.results.length > 0 ? this.results[this.results.length - 1].totalAmount : 0;
+  }
+
+  getFinalInterestEarned(): number {
+    return this.results.length > 0 ? this.results[this.results.length - 1].earnedInterest : 0;
+  }
+
+  getFinalPrincipal(): number {
+    return this.results.length > 0 ? this.results[this.results.length - 1].principal : 0;
+  }
+
+
+  // TODO: Rework this
+  // How to make this MORE reactive
+  // How can it be auto called (reactive)
+  private populateData() {
+
+    //Must calculate every year between NOW and desired end result
+    for (var year = 0; year <= this.years(); year++) {
+
+      // do i need to calcualte totalAmount for each result or just end result?
+      const totalAmount = this.compoundInterestWithAddedPrincipal(this.principal(), this.yearlyCompounds, this.interestRate(), year, this.monthlyAddedPrincipal());
+
+      // Calculate the actual principal invested up to this year
+      const principalInvested = this.principal() + (this.monthlyAddedPrincipal() * 12 * year);
+      const earnedInterest = totalAmount - principalInvested;
+
+      this.results.push({
+        principal: principalInvested,
+        year: this.currentYear + year,
+        interestRate: this.interestRate(),
+        totalAmount: totalAmount,
+        earnedInterest: earnedInterest,
+      });
+    }
+
+    // Update display values from the final year (if results exist)
+    if (this.results.length > 0) {
+
+      this.totalAmountCalculated.set(this.getFinalTotalAmount());
+      this.earnedInterestCalculated.set(this.getFinalInterestEarned());
+      this.totalPrincipal.set(this.getFinalPrincipal());
+      console.log('Updated display values:', {
+        totalAmount: this.totalAmountCalculated(),
+        interest: this.earnedInterestCalculated(),
+        principal: this.totalPrincipal,
+        resultsLength: this.results.length
+      });
+    }
+  }
+
+  // No added principal
+  private compoundInterest(principal: number, yearlyCompounds: number, rate: number, time: number): number {
+	  return principal * Math.pow((1 + (rate/yearlyCompounds)),yearlyCompounds * time);
+  }
+
+  private compoundInterestWithAddedPrincipal(principal: number, yearlyCompounds: number, rate: number, time: number, monthlyAdded: number): number {
+    let left = this.compoundInterest(principal, yearlyCompounds, rate, time);
+    let right = monthlyAdded * (Math.pow(1 + (rate/yearlyCompounds), yearlyCompounds * time) -1) / (rate / yearlyCompounds);
+    return left + right
+  }
+
   private formatLabel(value: number): string {
     const numValue = Number(value);
 
@@ -235,50 +311,5 @@ export class MyChart implements OnInit, OnDestroy {
 
   private removeData() {
     this.results = [];
-  }
-
-  private populateData() {
-
-    //Must calculate every year between NOW and desired end result
-    for (var year = 0; year <= this.years; year++) {
-      const totalAmount = this.compoundInterestWithAddedPrincipal(this.principal, this.yearlyCompounds, this.interestRate, year, this.monthlyAddedPrincipal);
-
-      // Calculate the actual principal invested up to this year
-      const principalInvested = this.principal + (this.monthlyAddedPrincipal * 12 * year);
-      const earnedInterest = totalAmount - principalInvested;
-
-      this.results.push({
-        principal: principalInvested,
-        year: this.currentYear + year,
-        interestRate: this.interestRate,
-        totalAmount: totalAmount,
-        earnedInterest: earnedInterest,
-      });
-    }
-
-    // Update display values from the final year (if results exist)
-    if (this.results.length > 0) {
-      const finalResult = this.results[this.results.length - 1];
-      this.totalAmountCalculated = finalResult.totalAmount;
-      this.earnedInterestCalculated = finalResult.earnedInterest;
-      this.totalPrincipal = finalResult.principal;
-      console.log('Updated display values:', {
-        totalAmount: this.totalAmountCalculated,
-        interest: this.earnedInterestCalculated,
-        principal: this.totalPrincipal,
-        resultsLength: this.results.length
-      });
-    }
-  }
-
-  // No added principal
-  private compoundInterest(principal: number, yearlyCompounds: number, rate: number, time: number): number {
-	  return principal * Math.pow((1 + (rate/yearlyCompounds)),yearlyCompounds * time);
-  }
-
-  private compoundInterestWithAddedPrincipal(principal: number, yearlyCompounds: number, rate: number, time: number, monthlyAdded: number): number {
-    let left = this.compoundInterest(principal, yearlyCompounds, rate, time);
-    let right = monthlyAdded * (Math.pow(1 + (rate/yearlyCompounds), yearlyCompounds * time) -1) / (rate / yearlyCompounds);
-    return left + right
   }
 }
