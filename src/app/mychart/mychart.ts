@@ -1,9 +1,9 @@
 import { CurrencyPipe, PercentPipe } from '@angular/common';
 import {  Component, OnInit, ChangeDetectionStrategy, signal, computed, effect } from '@angular/core';
 import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, Tooltip } from 'chart.js';
-import {form, FormField, min, max, debounce} from '@angular/forms/signals';
+import { form, FormField, min, max, debounce } from '@angular/forms/signals';
 
-interface CompoundedInterestObject {
+interface CompoundedInterest {
   earnedInterest: number
   interestRate: number
   principal: number
@@ -29,8 +29,8 @@ export class MyChart implements OnInit {
   protected title = 'CompoundInterest';
   readonly yearlyCompounds = 12;  // monthly as default
 
-  readonly currentYear = (new Date).getFullYear();
-  years = signal<number>(1);
+  private readonly currentYear = (new Date).getFullYear();
+  years = signal<number>(5);
   interestRate = signal<number>(.07); // rate percentage of interest
   principal = signal<number>(100);
   totalAmountCalculated = signal<number>(0);
@@ -47,20 +47,40 @@ export class MyChart implements OnInit {
   inputForm = form(this.principalMonthlyAddedModel, (fieldPath) => {
     min(fieldPath.startingAmount, 0, {message: 'No negative numbers!'});
     min(fieldPath.monthlyAdded, 0, {message: 'No negative numbers!'});
-    debounce(fieldPath.startingAmount, 300);
+    max(fieldPath.startingAmount, 1000000000000, {message: '1 trillion is max'});
+    max(fieldPath.monthlyAdded, 1000000000000, {message: '1 trillion is max'});
+    debounce(fieldPath.startingAmount, 3000);
     debounce(fieldPath.monthlyAdded, 300);
   });
 
-  results = signal<CompoundedInterestObject[]>([]);
+  compoundInterestResults = signal<CompoundedInterest[]>([]);
 
+  getFinalTotalAmount = computed(() => {
+    const results = this.compoundInterestResults();
+    return results.length > 0 ? results[results.length - 1].totalAmount : 0;
+  });
+
+  getFinalInterestEarned = computed(() => {
+    const results = this.compoundInterestResults();
+    return results.length > 0 ? results[results.length - 1].earnedInterest : 0;
+  });
+
+  getFinalPrincipal = computed(() => {
+    const results = this.compoundInterestResults();
+    return results.length > 0 ? results[results.length - 1].principal : 0;
+  });
+
+  /**
+   * runs if years, rate, principal, or monthly changes.
+   */
   populateData = effect(() => {
     // I assume this will run if either of the four change
-    this.results.set([]);
+    this.compoundInterestResults.set([]);
 
     let tempResults = [];
     const years = this.years();
     const interestRate = this.interestRate();
-    const principal = this.inputForm().value().startingAmount
+    const principal = this.inputForm().value().startingAmount;
     const monthlyAdded = this.inputForm().value().monthlyAdded;
 
     for (var year = 0; year <= years; year++) {
@@ -79,14 +99,14 @@ export class MyChart implements OnInit {
         earnedInterest: earnedInterest,
       });
     }
-    this.results.update(items => [...items, ...tempResults]);
 
+    this.compoundInterestResults.update(items => [...items, ...tempResults]);
   });
 
   // new effect to update chart
   // After data is populated, second effect will run
   updateChart = effect(() => {
-    const results = this.results();
+    const results = this.compoundInterestResults();
     // Completely replace the data arrays to ensure Chart.js picks up changes
     this.barChart.data.labels = results.map(x => x.year);
     this.barChart.data.datasets[0].data = results.map(x => x.principal);
@@ -109,7 +129,6 @@ export class MyChart implements OnInit {
   }
 
   ngOnInit() {
-    this.years.set(15);
     this.initBarChart();
   }
 
@@ -119,17 +138,17 @@ export class MyChart implements OnInit {
      'barChart' , {
         type: 'bar',
         data: {
-          labels: this.results().map(x => x['year']),
+          labels: this.compoundInterestResults().map(x => x['year']),
           datasets: [
             {
               label: "Principal",
               backgroundColor: ["#0000ff", "#9900ff","#47afa2","#6600ff","#cc00ff"],
-              data: this.results().map(x => x['principal'])
+              data: this.compoundInterestResults().map(x => x['principal'])
             },
             {
               label: "Earned Interest",
               backgroundColor: ["#8080FF", "#CC80FF","#75C3B9", "#B280FF", "#E680FF"],
-              data: this.results().map(x => x['earnedInterest'])
+              data: this.compoundInterestResults().map(x => x['earnedInterest'])
             }
           ]
         },
@@ -198,22 +217,6 @@ export class MyChart implements OnInit {
     this.interestRate.update((value) => value > 0 ? value - 0.01 : value);
   }
 
-  // ALl three of these has to do with grabbing last result
-  getFinalTotalAmount(): number {
-    const results = this.results();
-    return results.length > 0 ? results[results.length - 1].totalAmount : 0;
-  }
-
-  getFinalInterestEarned(): number {
-    const results = this.results();
-    return results.length > 0 ? results[results.length - 1].earnedInterest : 0;
-  }
-
-  getFinalPrincipal(): number {
-    const results = this.results();
-    return results.length > 0 ? results[results.length - 1].principal : 0;
-  }
-
   private compoundInterest(principal: number, yearlyCompounds: number, rate: number, time: number): number {
 	  return principal * Math.pow((1 + (rate/yearlyCompounds)),yearlyCompounds * time);
   }
@@ -227,6 +230,10 @@ export class MyChart implements OnInit {
   private formatLabel(value: number): string {
     const numValue = Number(value);
 
+    // trillions
+    if (numValue >= 1000000000000) {
+      return '$' + (numValue / 1000000000000).toFixed(1) + 'T';
+    }
     // Billions
     if (numValue >= 1000000000) {
       return '$' + (numValue / 1000000000).toFixed(1) + 'B';
