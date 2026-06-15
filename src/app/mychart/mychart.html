@@ -1,11 +1,11 @@
-<div class="mychart-container">
+<div class="chart-container">
   <h1 class="app-title">Compound Calculator</h1>
 
   <div class="responsive-layout">
     <!-- Chart Section -->
     <div class="chart-section">
       <div class="chart-wrapper">
-        <canvas id="myChart"></canvas>
+        <canvas id="barChart"></canvas>
       </div>
     </div>
 
@@ -31,12 +31,22 @@
       <div class="control-group-row">
           <div class="control-group-half">
             <label class="control-label">Starting Amount</label>
-          <input matInput class="control-input" type="number" [formField]="inputForm.startingAmount">
+            <input matInput class="control-input" type="number" [formField]="inputForm.startingAmount">
+            @if (inputForm.startingAmount().invalid()) {
+              <div class="error">
+              <span>{{ inputForm.startingAmount().errors()[0]?.message }}</span>
+              </div>
+            }
           </div>
 
           <div class="control-group-half">
             <label class="control-label">Monthly Added</label>
             <input matInput class="control-input" type="number" [formField]="inputForm.monthlyAdded">
+            @if (inputForm.monthlyAdded().invalid()) {
+              <div class="error">
+              <span>{{ inputForm.monthlyAdded().errors()[0]?.message }}</span>
+              </div>
+            }
           </div>
         </div>
       @if(debug) {

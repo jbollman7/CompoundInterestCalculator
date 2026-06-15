@@ -1,7 +1,7 @@
 import { CurrencyPipe, PercentPipe } from '@angular/common';
 import {  Component, OnInit, ChangeDetectionStrategy, signal, computed, effect } from '@angular/core';
 import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, Tooltip } from 'chart.js';
-import {form, FormField} from '@angular/forms/signals';
+import {form, FormField, min, max, debounce} from '@angular/forms/signals';
 
 interface CompoundedInterestObject {
   earnedInterest: number
@@ -37,14 +37,19 @@ export class MyChart implements OnInit {
   earnedInterestCalculated = signal<number>(0);
   monthlyAddedPrincipal = signal<number>(0);
   totalPrincipal = signal<number>(0);
-  myChart!: Chart<"bar", number[], number>;
+  barChart!: Chart<"bar", number[], number>;
 
-  fooModel = signal<StartingPrincipalMonthlyAdded>({
+  principalMonthlyAddedModel = signal<StartingPrincipalMonthlyAdded>({
     startingAmount: this.principal(),
     monthlyAdded: this.monthlyAddedPrincipal()
   });
 
-  inputForm = form(this.fooModel);
+  inputForm = form(this.principalMonthlyAddedModel, (fieldPath) => {
+    min(fieldPath.startingAmount, 0, {message: 'No negative numbers!'});
+    min(fieldPath.monthlyAdded, 0, {message: 'No negative numbers!'});
+    debounce(fieldPath.startingAmount, 300);
+    debounce(fieldPath.monthlyAdded, 300);
+  });
 
   results = signal<CompoundedInterestObject[]>([]);
 
@@ -55,7 +60,7 @@ export class MyChart implements OnInit {
     let tempResults = [];
     const years = this.years();
     const interestRate = this.interestRate();
-    const principal = this.inputForm().value().startingAmount;
+    const principal = this.inputForm().value().startingAmount
     const monthlyAdded = this.inputForm().value().monthlyAdded;
 
     for (var year = 0; year <= years; year++) {
@@ -83,12 +88,12 @@ export class MyChart implements OnInit {
   updateChart = effect(() => {
     const results = this.results();
     // Completely replace the data arrays to ensure Chart.js picks up changes
-    this.myChart.data.labels = results.map(x => x.year);
-    this.myChart.data.datasets[0].data = results.map(x => x.principal);
-    this.myChart.data.datasets[1].data = results.map(x => x.earnedInterest);
+    this.barChart.data.labels = results.map(x => x.year);
+    this.barChart.data.datasets[0].data = results.map(x => x.principal);
+    this.barChart.data.datasets[1].data = results.map(x => x.earnedInterest);
 
     // Force update with mode 'reset' to prevent animation issues
-    this.myChart.update('none');
+    this.barChart.update('none');
   });
 
   constructor() {
@@ -105,13 +110,13 @@ export class MyChart implements OnInit {
 
   ngOnInit() {
     this.years.set(15);
-    this.initChart();
+    this.initBarChart();
   }
 
-  initChart() {
+  initBarChart() {
     const that = this;
-    this.myChart = new Chart(
-     'myChart' , {
+    this.barChart = new Chart(
+     'barChart' , {
         type: 'bar',
         data: {
           labels: this.results().map(x => x['year']),

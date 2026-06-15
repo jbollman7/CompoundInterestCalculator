@@ -1,5 +1,5 @@
 /* Container - fits viewport without scrolling */
-.mychart-container {
+.chart-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: clamp(0.5rem, 1.5vh, 1rem);
@@ -113,8 +113,8 @@
 
 .control-btn {
   flex: 0 0 auto;
-  min-width: clamp(40px, 8vw, 48px);
-  width: clamp(60px, 15vw, 80px);
+  min-width: clamp(80px, 8vw, 48px);
+  width: clamp(150px, 15vw, 80px);
   min-height: clamp(36px, 5vh, 48px);
   font-size: clamp(1.2rem, 2.5vh, 1.5rem);
   font-weight: bold;
@@ -262,9 +262,14 @@
   color: #3f51b5;
 }
 
+.error {
+  color: red;
+  font-size: 18px;
+}
+
 /* Mobile - ensure everything fits */
 @media screen and (max-width: 767px) {
-  .mychart-container {
+  .chart-container {
     padding: clamp(0.25rem, 1vh, 0.5rem);
   }
 
@@ -289,7 +294,7 @@
 
 /* Short screens - compact everything further */
 @media screen and (max-height: 700px) {
-  .mychart-container {
+  .chart-container {
     padding: 0.25rem;
   }
 
